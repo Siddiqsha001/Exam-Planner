@@ -97,12 +97,12 @@ export default function StudySessionModal({ session, onClose, onSave }: Readonly
       // Transform the data to match StudySessionData interface
       const startTime = new Date(data.startTime);
       const endTime = new Date(data.endTime);
-      
+      const duration = Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 60000)); // duration in minutes
       const sessionData = {
         title: data.title,
         subject: data.subject,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+        date: startTime.toISOString().split('T')[0], // Only the date part
+        duration,
         description: '', // Optional field
       };
 
