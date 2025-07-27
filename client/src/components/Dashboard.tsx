@@ -36,6 +36,12 @@ interface StudySession {
   subject?: Subject;
 }
 
+type ProgressType = {
+  studySessions: { total: number; completed: number };
+  exams: { total: number; completed: number };
+  subjects: { total: number; completed: number };
+};
+
 export default function Dashboard() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
@@ -48,7 +54,7 @@ export default function Dashboard() {
   const [selectedStudySession, setSelectedStudySession] = useState<StudySession | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideCompleted, setHideCompleted] = useState(false);
-  const [progress, setProgress] = useState<any>(null);
+  const [progress, setProgress] = useState<ProgressType | null>(null);
 
   useEffect(() => {
     fetchData();
