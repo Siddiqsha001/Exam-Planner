@@ -129,4 +129,8 @@ export const pomodoroAPI = {
   getStats: () => api.get('/pomodoro/stats'),
 };
 
+export const getProgress = async () => {
+  return api.get("/progress");
+};
+
 export default api;

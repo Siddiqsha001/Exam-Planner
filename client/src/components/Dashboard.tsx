@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { examAPI, studySessionAPI, subjectAPI } from '@/lib/api';
+import { examAPI, studySessionAPI, subjectAPI, getProgress } from '@/lib/api';
 import ExamModal from '@/components/ExamModal';
 import StudySessionModal from '@/components/StudySessionModal';
 import SubjectModal from '@/components/SubjectModal';
@@ -13,7 +13,7 @@ interface Subject {
   name: string;
   description?: string;
   color: string;
-  completed: boolean;
+  isCompleted: boolean;
 }
 
 interface Exam {
@@ -22,7 +22,7 @@ interface Exam {
   date: string;
   description?: string;
   subject?: Subject;
-  completed: boolean;
+  isCompleted: boolean;
 }
 
 interface StudySession {
@@ -48,9 +48,11 @@ export default function Dashboard() {
   const [selectedStudySession, setSelectedStudySession] = useState<StudySession | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [progress, setProgress] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
+    fetchProgress();
   }, []);
 
   const fetchData = async () => {
@@ -67,6 +69,15 @@ export default function Dashboard() {
       console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProgress = async () => {
+    try {
+      const res = await getProgress();
+      setProgress(res.data);
+    } catch (error) {
+      console.error('Failed to fetch progress:', error);
     }
   };
 
@@ -103,7 +114,8 @@ export default function Dashboard() {
   const handleToggleSession = async (sessionId: string) => {
     try {
       await studySessionAPI.toggleSession(sessionId);
-      fetchData(); // Refresh data
+      await fetchData(); // Refresh data
+      await fetchProgress();
     } catch (error) {
       console.error('Failed to toggle session:', error);
     }
@@ -112,9 +124,20 @@ export default function Dashboard() {
   const handleToggleSubject = async (subjectId: string) => {
     try {
       await subjectAPI.toggleSubject(subjectId);
-      fetchData(); // Refresh data
+      await fetchData(); // Refresh data
+      await fetchProgress();
     } catch (error) {
       console.error('Failed to toggle subject:', error);
+    }
+  };
+
+  const handleToggleExam = async (examId: string) => {
+    try {
+      await examAPI.toggleExam(examId);
+      fetchData();
+      fetchProgress();
+    } catch (error) {
+      console.error('Failed to toggle exam:', error);
     }
   };
 
@@ -144,9 +167,9 @@ export default function Dashboard() {
   };
 
   // Filter data based on hideCompleted setting
-  const filteredSubjects = hideCompleted ? subjects.filter(s => !s.completed) : subjects;
+  const filteredSubjects = hideCompleted ? subjects.filter(s => !s.isCompleted) : subjects;
   const filteredExams = hideCompleted 
-    ? exams.filter(e => !e.completed && (!e.subject?.completed))
+    ? exams.filter(e => !e.isCompleted && (!e.subject?.isCompleted))
     : exams;
 
   const upcomingExams = filteredExams
@@ -159,7 +182,7 @@ export default function Dashboard() {
     const today = new Date().toDateString();
     const shouldShow = sessionDate === today;
     if (hideCompleted && session.completed) return false;
-    if (hideCompleted && session.subject?.completed) return false;
+    if (hideCompleted && session.subject?.isCompleted) return false;
     return shouldShow;
   });
 
@@ -177,6 +200,26 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Progress Bar */}
+      {progress && (
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Overall Progress</h2>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-2">
+            <div
+              className="bg-blue-600 h-4 rounded-full transition-all duration-300"
+              style={{ width: `${Math.round(((progress.studySessions.completed + progress.exams.completed + progress.subjects.completed) / (progress.studySessions.total + progress.exams.total + progress.subjects.total || 1)) * 100)}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+            <span>Study Sessions: {progress.studySessions.completed}/{progress.studySessions.total}</span>
+            <span>Exams: {progress.exams.completed}/{progress.exams.total}</span>
+            <span>Subjects: {progress.subjects.completed}/{progress.subjects.total}</span>
+            <span className="font-bold text-blue-600 dark:text-blue-400">
+              {Math.round(((progress.studySessions.completed + progress.exams.completed + progress.subjects.completed) / (progress.studySessions.total + progress.exams.total + progress.subjects.total || 1)) * 100)}% Complete
+            </span>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-center flex-1">
@@ -303,10 +346,10 @@ export default function Dashboard() {
                   role="button"
                   tabIndex={0}
                   className={`p-4 border-2 rounded-xl transition-all cursor-pointer hover:shadow-md ${
-                    subject.completed 
+                    subject.isCompleted 
                       ? 'border-gray-200 dark:border-gray-700 opacity-75' 
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  } ${hideCompleted && subject.completed ? 'blur-sm' : ''}`}
+                  } ${hideCompleted && subject.isCompleted ? 'blur-sm' : ''}`}
                   onClick={() => handleEditSubject(subject)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -321,7 +364,7 @@ export default function Dashboard() {
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: subject.color }}
                       ></div>
-                      <h4 className={`font-medium ${subject.completed ? 'line-through text-gray-500' : 'text-gray-900 dark:text-white'}`}>
+                      <h4 className={`font-medium ${subject.isCompleted ? 'line-through text-gray-500' : 'text-gray-900 dark:text-white'}`}>
                         {subject.name}
                       </h4>
                     </div>
@@ -331,12 +374,12 @@ export default function Dashboard() {
                         handleToggleSubject(subject._id);
                       }}
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                        subject.completed
+                        subject.isCompleted
                           ? 'bg-green-500 border-green-500 text-white'
                           : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
                       }`}
                     >
-                      {subject.completed && (
+                      {subject.isCompleted && (
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -414,7 +457,25 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end">
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleToggleExam(exam._id);
+                      }}
+                      className={`w-5 h-5 mb-2 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        exam.isCompleted
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
+                      }`}
+                      title={exam.isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+                    >
+                      {exam.isCompleted && (
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
                     <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
                       {new Date(exam.date).toLocaleDateString()}
                     </p>

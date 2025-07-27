@@ -6,6 +6,7 @@ const examRoutes = require("./routes/exams");
 const studyRoutes = require("./routes/study");
 const subjectRoutes = require("./routes/subjects");
 const pomodoroRoutes = require("./routes/pomodoro");
+const progressRoutes = require("./routes/progress");
 
 require("dotenv").config();
 
@@ -41,6 +42,7 @@ app.use("/api/exams", examRoutes);
 app.use("/api/study", studyRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/pomodoro", pomodoroRoutes);
+app.use("/api/progress", progressRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Exam Planner API is running!" });
