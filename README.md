@@ -2,6 +2,8 @@
 
 A full-stack web application to help students plan and track their exam preparation efficiently.
 
+https://exam-planner-ovsf.vercel.app/
+
 ## Features
 
 - **Authentication**: Simple login/signup system
